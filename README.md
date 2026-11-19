@@ -34,6 +34,13 @@ npm run app                       # terminal 2: Expo dev server (press i for iOS
 - Verified so far: typecheck, web bundle and browser render against the live API.
   **Not yet run on a native iOS/Android simulator.**
 
+## Hosted web demo
+
+`apps/mobile/demo` bundles the real screens plus the real Darwin query code into
+one script (`npm run demo:build -w @platform/mobile`). Small shims replace the
+router, storage and network, and the synthetic feed runs inside the page, so it
+needs no server. `demo/index.html` is the page that loads `dist/app.js`.
+
 ## Widgets (next)
 
 Widgets must be native (WidgetKit on iOS, Glance on Android) and need a Mac with

@@ -1,0 +1,42 @@
+<title>Platform Train Times</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+  /* Layout: a phone-sized app column centred on the page, with a one-line note above it. */
+  :root {
+    --page-bg: #E8ECF1;
+    --page-fg: #0F1720;
+    --page-muted: #55616D;
+    --page-link: #0A5CFF;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --page-bg: #06090D; --page-fg: #F1F4F8; --page-muted: #93A0AD; --page-link: #5B9BFF;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --page-bg: #06090D; --page-fg: #F1F4F8; --page-muted: #93A0AD; --page-link: #5B9BFF;
+    color-scheme: dark;
+  }
+  html, body { height: 100%; }
+  body {
+    background: var(--page-bg);
+    color: var(--page-fg);
+    font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding-block: 12px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  .note {
+    max-width: 430px; width: 100%; margin: 0 auto;
+    font-size: 12.5px; line-height: 1.45; color: var(--page-muted);
+  }
+  .note strong { color: var(--page-fg); font-weight: 650; }
+  #root { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+</style>
+<p class="note"><strong>Interactive demo.</strong> A simulated Paddington to Reading timetable runs inside this page, so trains, delays and cancellations are live-looking but not real. Home is Slough and work is London Paddington. Tap To work to see a train approaching, then open it for the line view.</p>
+<div id="root"></div>
+<script src="app.js"></script>
