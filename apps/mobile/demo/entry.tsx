@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState, type ReactElement } from 'react';
 import { AppRegistry, Pressable, StyleSheet, Text, View } from 'react-native';
 import Home from '../src/app/index';
 import ServiceScreen from '../src/app/service/[rid]';
@@ -14,7 +14,7 @@ installBrowserApi();
 type RouteName = 'index' | 'service' | 'settings';
 interface Entry { key: string; name: RouteName; params: Record<string, string> }
 
-const SCREENS: Record<RouteName, { Comp: () => JSX.Element | null; title: string }> = {
+const SCREENS: Record<RouteName, { Comp: () => ReactElement | null; title: string }> = {
   index: { Comp: Home, title: 'Trains' },
   service: { Comp: ServiceScreen, title: 'Journey' },
   settings: { Comp: Settings, title: 'My stations' },
@@ -97,4 +97,4 @@ const s = StyleSheet.create({
 });
 
 AppRegistry.registerComponent('Demo', () => DemoApp);
-AppRegistry.runApplication('Demo', { rootTag: document.getElementById('root') });
+AppRegistry.runApplication('Demo', { rootTag: document.getElementById('root') as never });
