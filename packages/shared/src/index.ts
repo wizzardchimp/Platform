@@ -106,3 +106,20 @@ export interface StationSearchResult {
   crs: string;
   name: string;
 }
+
+/** Compact payload for home-screen widgets: one request, small, cache-friendly. */
+export interface WidgetData {
+  updatedAt: string;
+  from: { crs: string; name: string };
+  to: { crs: string; name: string };
+  next: Array<{
+    rid: string;
+    departs: string;
+    expected: string | null;
+    status: ServiceStatus;
+    delayMinutes: number;
+    platform: string | null;
+    arrives: string | null;
+    arrivesExpected: string | null;
+  }>;
+}

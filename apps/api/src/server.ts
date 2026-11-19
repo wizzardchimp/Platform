@@ -1,6 +1,7 @@
+import cors from '@fastify/cors';
 import Fastify from 'fastify';
 import { z } from 'zod';
-import type { StationSearchResult } from '@platform/shared';
+import type { StationSearchResult, WidgetData } from '@platform/shared';
 import { getApproaching, getDepartures, getService, NotFoundError, type Ctx } from './query/board';
 
 const crsSchema = z.string().length(3).transform((s) => s.toUpperCase());
@@ -8,6 +9,8 @@ const crsSchema = z.string().length(3).transform((s) => s.toUpperCase());
 export function buildServer(ctx: Ctx, opts: { source: string; clock?: () => number }) {
   const app = Fastify({ logger: process.env.NODE_ENV !== 'test' });
   const now = opts.clock ?? Date.now;
+  // Public read-only data; lets the web build and dev tools call the API.
+  void app.register(cors, { origin: true, methods: ['GET'] });
 
   app.setErrorHandler((err: Error & { statusCode?: number }, _req, reply) => {
     if (err instanceof NotFoundError) return reply.code(404).send({ error: err.message });
@@ -48,6 +51,28 @@ export function buildServer(ctx: Ctx, opts: { source: string; clock?: () => numb
     const { crs } = z.object({ crs: crsSchema }).parse(req.params);
     const { limit } = z.object({ limit: z.coerce.number().int().min(1).max(20).default(5) }).parse(req.query);
     return getApproaching(ctx, crs, { limit, now: now() });
+  });
+
+  app.get('/v1/widget/:from/:to', async (req): Promise<WidgetData> => {
+    const { from, to } = z.object({ from: crsSchema, to: crsSchema }).parse(req.params);
+    const t = now();
+    const deps = getDepartures(ctx, from, { to, limit: 3, windowMin: 180, now: t });
+    const name = (crs: string) => ({ crs, name: ctx.ref.station(crs)!.name });
+    return {
+      updatedAt: new Date(t).toISOString(),
+      from: name(from),
+      to: name(to),
+      next: deps.map((d) => ({
+        rid: d.rid,
+        departs: d.scheduled,
+        expected: d.expected,
+        status: d.status,
+        delayMinutes: d.delayMinutes,
+        platform: d.platform?.name ?? null,
+        arrives: d.arrivalAtDestination?.scheduled ?? null,
+        arrivesExpected: d.arrivalAtDestination?.expected ?? null,
+      })),
+    };
   });
 
   app.get('/v1/services/:rid', async (req) => {

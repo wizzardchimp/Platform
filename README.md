@@ -6,7 +6,7 @@ station, and a home-screen widget. Information only, no ticketing.
 ```
 apps/api         Darwin Push Port ingest + REST API (TypeScript, Fastify)
 packages/shared  API types shared with the mobile app
-apps/mobile      (next) Expo / React Native app + native widgets
+apps/mobile      Expo (SDK 58) / React Native app, Expo Router
 ```
 
 ## Run the API
@@ -20,7 +20,32 @@ npm test
 Try: `/health`, `/v1/stations?q=read`, `/v1/stations/RDG/departures?to=PAD`,
 `/v1/stations/SLO/approaching`, `/v1/services/{rid}`.
 
+## Run the app
+
+```bash
+npm run api                       # terminal 1: synthetic API on :3000
+npm run app                       # terminal 2: Expo dev server (press i for iOS simulator)
+```
+
+- iOS simulator uses `http://localhost:3000`; on a physical phone set
+  `EXPO_PUBLIC_API_URL=http://<your-mac-LAN-ip>:3000` (see `apps/mobile/.env.example`).
+- With the synthetic feed, pick **Slough** as home and **London Paddington** as
+  work to see a train approaching (Paddington <-> Reading line only).
+- Verified so far: typecheck, web bundle and browser render against the live API.
+  **Not yet run on a native iOS/Android simulator.**
+
+## Widgets (next)
+
+Widgets must be native (WidgetKit on iOS, Glance on Android) and need a Mac with
+Xcode. They should call one small endpoint, `GET /v1/widget/:from/:to`
+(`WidgetData` in `packages/shared`), and show the next 3 trains. The app writes the
+saved home/work pair to a shared App Group so the widget knows which route to fetch.
+Needs a dev build (`expo prebuild`); Expo Go cannot run widgets.
+
 ## Going live (Darwin)
+
+> Note: National Rail's legacy NRDP portal (STOMP/FTP/S3 feeds) is being shut down
+> in favour of the Rail Data Marketplace. Build only against RDM.
 
 1. Register at the Rail Data Marketplace and subscribe to the Darwin Push Port
    (plus the reference and timetable files).

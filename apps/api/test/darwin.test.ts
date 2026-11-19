@@ -154,6 +154,11 @@ describe('synthetic feed + HTTP API', () => {
     const svc = (await app.inject(`/v1/services/${board[0].rid}`)).json();
     expect(svc.callingPoints.length).toBe(7);
 
+    const w = (await app.inject('/v1/widget/RDG/PAD')).json();
+    expect(w.from.crs).toBe('RDG');
+    expect(w.next.length).toBeGreaterThan(0);
+    expect(w.next[0].arrives).toBeTruthy();
+
     expect((await app.inject('/v1/stations/ZZZ/departures')).statusCode).toBe(404);
     expect((await app.inject('/v1/stations/RDGX/departures')).statusCode).toBe(400);
     expect((await app.inject('/v1/stations?q=pad')).json()[0].crs).toBe('PAD');
