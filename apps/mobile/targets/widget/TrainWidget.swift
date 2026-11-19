@@ -123,7 +123,11 @@ struct TrainWidgetView: View {
             }
         default: // systemSmall
             VStack(alignment: .leading, spacing: 2) {
-                header(p)
+                // Station codes: full names don't fit a small widget.
+                Text("\(p.from.crs) → \(p.to.crs)")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
                 Spacer(minLength: 0)
                 if let t = p.hero {
                     Text(t.departureText)

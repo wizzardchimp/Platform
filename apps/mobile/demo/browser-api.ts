@@ -6,6 +6,7 @@
 import { DarwinStore } from '../../api/src/darwin/store';
 import { pushSynthetic, syntheticReference } from '../../api/src/dev/synthetic';
 import { getApproaching, getDepartures, getService, NotFoundError } from '../../api/src/query/board';
+import { getWidget } from '../../api/src/query/widget';
 
 export const DEMO_ORIGIN = 'http://demo.local';
 
@@ -30,6 +31,8 @@ export function installBrowserApi(): void {
     }
     m = p.match(/^\/v1\/stations\/([A-Za-z]{3})\/approaching$/);
     if (m) return getApproaching(ctx, m[1]!.toUpperCase(), { limit: num('limit', 5), now });
+    m = p.match(/^\/v1\/widget\/([A-Za-z]{3})\/([A-Za-z]{3})$/);
+    if (m) return getWidget(ctx, m[1]!.toUpperCase(), m[2]!.toUpperCase(), now);
     m = p.match(/^\/v1\/services\/([^/]+)$/);
     if (m) return getService(ctx, decodeURIComponent(m[1]!), now);
     throw new NotFoundError(`No route ${p}`);

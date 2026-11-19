@@ -1,42 +1,167 @@
 <title>Platform Train Times</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <style>
-  /* Layout: a phone-sized app column centred on the page, with a one-line note above it. */
+  /* Layout: the app in a phone-sized column, with a widget preview panel beside it (stacked on narrow screens). */
   :root {
-    --page-bg: #E8ECF1;
-    --page-fg: #0F1720;
-    --page-muted: #55616D;
-    --page-link: #0A5CFF;
+    --page-bg: #E8ECF1; --page-fg: #0F1720; --page-muted: #55616D; --page-line: #CBD2DA;
+    --w-bg: #F7F8FA; --w-fg: #0F1720; --w-sub: #5B6773;
+    --w-ok: #17824A; --w-warn: #B86B00; --w-bad: #C62828; --w-gray: #7A8590;
+    --lock-bg: #2B3440; --lock-fg: #F4F6F8; --lock-sub: #AAB4BF;
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
-      --page-bg: #06090D; --page-fg: #F1F4F8; --page-muted: #93A0AD; --page-link: #5B9BFF;
+      --page-bg: #06090D; --page-fg: #F1F4F8; --page-muted: #93A0AD; --page-line: #27303A;
+      --w-bg: #1C2128; --w-fg: #F1F4F8; --w-sub: #93A0AD;
+      --w-ok: #4CC585; --w-warn: #F0A63A; --w-bad: #FF6B6B; --w-gray: #7A8590;
       color-scheme: dark;
     }
   }
   :root[data-theme="dark"] {
-    --page-bg: #06090D; --page-fg: #F1F4F8; --page-muted: #93A0AD; --page-link: #5B9BFF;
+    --page-bg: #06090D; --page-fg: #F1F4F8; --page-muted: #93A0AD; --page-line: #27303A;
+    --w-bg: #1C2128; --w-fg: #F1F4F8; --w-sub: #93A0AD;
+    --w-ok: #4CC585; --w-warn: #F0A63A; --w-bad: #FF6B6B; --w-gray: #7A8590;
     color-scheme: dark;
   }
-  html, body { height: 100%; }
   body {
-    background: var(--page-bg);
-    color: var(--page-fg);
+    background: var(--page-bg); color: var(--page-fg);
     font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    padding-block: 12px;
+    padding-block: 14px;
     padding-left: max(16px, env(safe-area-inset-left, 0px));
     padding-right: max(16px, env(safe-area-inset-right, 0px));
   }
-  .note {
-    max-width: 430px; width: 100%; margin: 0 auto;
-    font-size: 12.5px; line-height: 1.45; color: var(--page-muted);
-  }
+  .note { max-width: 860px; margin: 0 auto 12px; font-size: 12.5px; line-height: 1.45; color: var(--page-muted); }
   .note strong { color: var(--page-fg); font-weight: 650; }
-  #root { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  .stage { display: flex; flex-wrap: wrap; gap: 24px; justify-content: center; align-items: flex-start; }
+  #root { display: flex; flex-direction: column; width: min(430px, 100%); height: 780px; max-height: calc(100vh - 28px); min-height: 520px; }
+
+  .panel { width: min(380px, 100%); display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+  .panel h2 { margin: 0; font-size: 15px; font-weight: 700; }
+  .panel .cap { margin: 4px 0 0; font-size: 12.5px; line-height: 1.45; color: var(--page-muted); }
+  .group { display: flex; flex-direction: column; gap: 8px; }
+  .label { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; font-weight: 700; color: var(--page-muted); }
+  .row { display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-start; }
+
+  .w { background: var(--w-bg); color: var(--w-fg); border-radius: 22px; padding: 14px; box-sizing: border-box; overflow: hidden;
+       box-shadow: 0 1px 0 var(--page-line), 0 6px 18px rgba(0,0,0,.10); display: flex; flex-direction: column; }
+  .w-small { width: 158px; height: 158px; }
+  .w-medium { width: 338px; max-width: 100%; height: 158px; gap: 6px; }
+  .w-head { font-size: 12px; font-weight: 600; color: var(--w-sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .w-time { font: 700 38px/1.05 ui-rounded, "SF Pro Rounded", Inter, system-ui, sans-serif; font-variant-numeric: tabular-nums; margin-top: auto; }
+  .w-status { font-size: 12px; font-weight: 650; margin-top: 2px; }
+  .w-sub { font-size: 11px; color: var(--w-sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .w-row { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .w-dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+  .w-row .t { font-size: 17px; font-weight: 650; font-variant-numeric: tabular-nums; }
+  .w-row .s { font-size: 12px; font-weight: 500; }
+  .w-row .p { margin-left: auto; font-size: 12px; color: var(--w-sub); white-space: nowrap; }
+  .cancelled { text-decoration: line-through; }
+  .ok { color: var(--w-ok); } .warn { color: var(--w-warn); } .bad { color: var(--w-bad); } .gray { color: var(--w-gray); }
+  .d-ok { background: var(--w-ok); } .d-warn { background: var(--w-warn); } .d-bad { background: var(--w-bad); } .d-gray { background: var(--w-gray); }
+
+  .lock { background: var(--lock-bg); color: var(--lock-fg); border-radius: 18px; padding: 14px; display: flex; flex-direction: column; gap: 10px; width: 100%; box-sizing: border-box; }
+  .lock-rect { background: rgba(255,255,255,.12); border-radius: 12px; padding: 8px 12px; width: 168px; box-sizing: border-box; }
+  .lock-rect .a { font-size: 11px; color: var(--lock-sub); }
+  .lock-rect .b { font-size: 17px; font-weight: 700; }
+  .lock-rect .c { font-size: 12px; }
+  .lock-inline { font-size: 13px; font-weight: 500; }
+  .empty { font-size: 12.5px; color: var(--w-sub); }
 </style>
-<p class="note"><strong>Interactive demo.</strong> A simulated Paddington to Reading timetable runs inside this page, so trains, delays and cancellations are live-looking but not real. Home is Slough and work is London Paddington. Tap To work to see a train approaching, then open it for the line view.</p>
-<div id="root"></div>
+<p class="note"><strong>Interactive demo.</strong> A simulated Paddington to Reading timetable runs inside this page, so trains, delays and cancellations are live-looking but not real. Home is Slough and work is London Paddington. In the app, tap To work to see a train approaching, then open it for the line view.</p>
+<div class="stage">
+  <div id="root"></div>
+  <aside class="panel" aria-label="Widget preview">
+    <div>
+      <h2>Home screen widget preview</h2>
+      <p class="cap">An HTML re-creation of the SwiftUI widget layouts, fed by the same data as the app. The real widget is drawn by iOS, so fonts and spacing will differ slightly. Before midday it shows the way to work, after midday the way home.</p>
+    </div>
+    <div class="group"><span class="label">Small and medium</span><div class="row" id="w-home"></div></div>
+    <div class="group"><span class="label">Lock screen</span><div class="lock" id="w-lock"></div></div>
+  </aside>
+</div>
 <script src="app.js"></script>
+<script>
+(function () {
+  var ORIGIN = 'http://demo.local';
+  var homeEl = document.getElementById('w-home');
+  var lockEl = document.getElementById('w-lock');
+
+  function stations() {
+    var d = { home: 'SLO', work: 'PAD' };
+    try {
+      var v = JSON.parse(localStorage.getItem('platform.stations.v1') || 'null');
+      if (v && v.home && v.work) return { home: v.home.crs, work: v.work.crs };
+    } catch (e) {}
+    return d;
+  }
+  function clock(iso) { return iso && iso.length >= 16 ? iso.slice(11, 16) : '--:--'; }
+  function cls(status) { return { on_time: 'ok', delayed: 'warn', cancelled: 'bad' }[status] || 'gray'; }
+  function label(t) {
+    return { on_time: 'On time', delayed: t.delayMinutes + ' min late', cancelled: 'Cancelled' }[t.status] || 'Departed';
+  }
+  function shownTime(t) { return clock(t.status === 'delayed' ? t.expected : t.departs); }
+  function running(t) { return t.status !== 'cancelled' && t.status !== 'departed'; }
+  function el(tag, className, text) {
+    var n = document.createElement(tag);
+    if (className) n.className = className;
+    if (text != null) n.textContent = text;
+    return n;
+  }
+  function plat(t) { return t.platform ? 'Plat ' + t.platform : ''; }
+
+  function small(p) {
+    var w = el('div', 'w w-small');
+    w.appendChild(el('div', 'w-head', p.from.crs + ' → ' + p.to.crs));
+    var hero = p.next.filter(running)[0];
+    if (!hero) { w.appendChild(el('div', 'empty', 'No trains soon')); return w; }
+    w.appendChild(el('div', 'w-time', shownTime(hero)));
+    w.appendChild(el('div', 'w-status ' + cls(hero.status), label(hero)));
+    w.appendChild(el('div', 'w-sub', 'Arrives ' + clock(hero.arrivesExpected || hero.arrives) + (hero.platform ? ' · ' + plat(hero) : '')));
+    return w;
+  }
+  function medium(p) {
+    var w = el('div', 'w w-medium');
+    w.appendChild(el('div', 'w-head', p.from.name + ' → ' + p.to.name));
+    if (!p.next.length) w.appendChild(el('div', 'empty', 'No trains in the next few hours.'));
+    p.next.slice(0, 3).forEach(function (t) {
+      var r = el('div', 'w-row');
+      r.appendChild(el('span', 'w-dot d-' + cls(t.status)));
+      r.appendChild(el('span', 't' + (t.status === 'cancelled' ? ' cancelled' : ''), shownTime(t)));
+      r.appendChild(el('span', 's ' + cls(t.status), label(t)));
+      r.appendChild(el('span', 'p', plat(t)));
+      w.appendChild(r);
+    });
+    return w;
+  }
+  function lock(p) {
+    var frag = document.createDocumentFragment();
+    var hero = p.next.filter(running)[0];
+    var rect = el('div', 'lock-rect');
+    rect.appendChild(el('div', 'a', p.from.crs + ' to ' + p.to.crs));
+    if (hero) {
+      rect.appendChild(el('div', 'b', shownTime(hero)));
+      rect.appendChild(el('div', 'c', label(hero) + (hero.platform ? ' · ' + plat(hero) : '')));
+    } else rect.appendChild(el('div', 'c', 'No trains soon'));
+    frag.appendChild(rect);
+    frag.appendChild(el('div', 'lock-inline', hero ? shownTime(hero) + ' to ' + p.to.crs + ' · ' + label(hero) : 'No trains to ' + p.to.crs));
+    return frag;
+  }
+
+  function refresh() {
+    var s = stations();
+    var toWork = new Date().getHours() < 12;
+    var from = toWork ? s.home : s.work, to = toWork ? s.work : s.home;
+    fetch(ORIGIN + '/v1/widget/' + from + '/' + to)
+      .then(function (r) { if (!r.ok) throw new Error(String(r.status)); return r.json(); })
+      .then(function (p) {
+        homeEl.replaceChildren(small(p), medium(p));
+        lockEl.replaceChildren(lock(p));
+      })
+      .catch(function () {
+        homeEl.replaceChildren(el('div', 'empty', 'Choose stations in the app to see the widget.'));
+        lockEl.replaceChildren();
+      });
+  }
+  refresh();
+  setInterval(refresh, 15000);
+})();
+</script>

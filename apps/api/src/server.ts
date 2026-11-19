@@ -2,6 +2,7 @@ import cors from '@fastify/cors';
 import Fastify from 'fastify';
 import { z } from 'zod';
 import type { StationSearchResult, WidgetData } from '@platform/shared';
+import { getWidget } from './query/widget';
 import { getApproaching, getDepartures, getService, NotFoundError, type Ctx } from './query/board';
 
 const crsSchema = z.string().length(3).transform((s) => s.toUpperCase());
@@ -55,24 +56,7 @@ export function buildServer(ctx: Ctx, opts: { source: string; clock?: () => numb
 
   app.get('/v1/widget/:from/:to', async (req): Promise<WidgetData> => {
     const { from, to } = z.object({ from: crsSchema, to: crsSchema }).parse(req.params);
-    const t = now();
-    const deps = getDepartures(ctx, from, { to, limit: 3, windowMin: 180, now: t });
-    const name = (crs: string) => ({ crs, name: ctx.ref.station(crs)!.name });
-    return {
-      updatedAt: new Date(t).toISOString(),
-      from: name(from),
-      to: name(to),
-      next: deps.map((d) => ({
-        rid: d.rid,
-        departs: d.scheduled,
-        expected: d.expected,
-        status: d.status,
-        delayMinutes: d.delayMinutes,
-        platform: d.platform?.name ?? null,
-        arrives: d.arrivalAtDestination?.scheduled ?? null,
-        arrivesExpected: d.arrivalAtDestination?.expected ?? null,
-      })),
-    };
+    return getWidget(ctx, from, to, now());
   });
 
   app.get('/v1/services/:rid', async (req) => {
