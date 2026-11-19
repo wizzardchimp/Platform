@@ -1,0 +1,10 @@
+{
+  "name": "platform",
+  "private": true,
+  "workspaces": ["apps/*", "packages/*"],
+  "scripts": {
+    "api": "npm run dev -w @platform/api",
+    "test": "npm test -w @platform/api",
+    "typecheck": "npm run typecheck -w @platform/api"
+  }
+}
