@@ -46,8 +46,11 @@
   .w-small { width: 158px; height: 158px; }
   .w-medium { width: 338px; max-width: 100%; height: 158px; gap: 6px; }
   .w-head { font-size: 12px; font-weight: 600; color: var(--w-sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .w-time { font: 700 38px/1.05 ui-rounded, "SF Pro Rounded", Inter, system-ui, sans-serif; font-variant-numeric: tabular-nums; margin-top: auto; }
-  .w-status { font-size: 12px; font-weight: 650; margin-top: 2px; }
+  .w-time { font: 700 34px/1.05 ui-rounded, "SF Pro Rounded", Inter, system-ui, sans-serif; font-variant-numeric: tabular-nums; }
+  .w-status { font-size: 12px; font-weight: 650; }
+  .w-mins { font-size: 18px; font-weight: 700; line-height: 1.2; }
+  .w-foot { margin-top: auto; font-size: 11px; font-weight: 500; color: var(--w-sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .w-small { gap: 2px; }
   .w-sub { font-size: 11px; color: var(--w-sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .w-row { display: flex; align-items: center; gap: 8px; min-width: 0; }
   .w-dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
@@ -59,10 +62,17 @@
   .d-ok { background: var(--w-ok); } .d-warn { background: var(--w-warn); } .d-bad { background: var(--w-bad); } .d-gray { background: var(--w-gray); }
 
   .lock { background: var(--lock-bg); color: var(--lock-fg); border-radius: 18px; padding: 14px; display: flex; flex-direction: column; gap: 10px; width: 100%; box-sizing: border-box; }
-  .lock-rect { background: rgba(255,255,255,.12); border-radius: 12px; padding: 8px 12px; width: 168px; box-sizing: border-box; }
-  .lock-rect .a { font-size: 11px; color: var(--lock-sub); }
-  .lock-rect .b { font-size: 17px; font-weight: 700; }
-  .lock-rect .c { font-size: 12px; }
+  .lock-rect { background: rgba(255,255,255,.12); border-radius: 12px; padding: 6px 8px; width: 172px; height: 76px; box-sizing: border-box;
+               display: flex; gap: 5px; overflow: hidden; line-height: 1.2; }
+  .lock-main { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; }
+  .lock-main .r1 { display: flex; align-items: baseline; gap: 3px; }
+  .lock-main .tm { font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .lock-main .rt { font-size: 9.5px; color: var(--lock-sub); }
+  .lock-main .r2 { font-size: 12px; font-weight: 650; }
+  .lock-main .r3 { font-size: 10.5px; }
+  .lock-main .r4 { font-size: 10.5px; color: var(--lock-sub); }
+  .lock-div { width: 1px; background: var(--lock-sub); flex: none; }
+  .lock-next { display: flex; flex-direction: column; gap: 2px; align-items: flex-end; font-size: 11px; font-weight: 650; font-variant-numeric: tabular-nums; white-space: nowrap; }
   .lock-inline { font-size: 13px; font-weight: 500; }
   .empty { font-size: 12.5px; color: var(--w-sub); }
 </style>
@@ -106,23 +116,43 @@
     if (text != null) n.textContent = text;
     return n;
   }
+  function minsLeft(t) {
+    var d = new Date(t.expected || t.departs), m = Math.ceil((d - Date.now()) / 60000);
+    if (isNaN(m)) return '--';
+    return m <= 0 ? 'Due' : m === 1 ? '1 min' : m + ' min';
+  }
+  function upcoming(p) {
+    return p.next.filter(function (t) {
+      if (t.status === 'departed') return false;
+      var d = new Date(t.expected || t.departs);
+      return isNaN(d) || d >= Date.now() - 30000;
+    });
+  }
+  function platTbc(t) { return t.platform ? 'Plat ' + t.platform : 'Plat TBC'; }
   function plat(t) { return t.platform ? 'Plat ' + t.platform : ''; }
 
   function small(p) {
     var w = el('div', 'w w-small');
-    w.appendChild(el('div', 'w-head', p.from.crs + ' → ' + p.to.crs));
-    var hero = p.next.filter(running)[0];
-    if (!hero) { w.appendChild(el('div', 'empty', 'No trains soon')); return w; }
+    var hero = upcoming(p).filter(running)[0];
+    if (!hero) {
+      w.appendChild(el('div', 'w-head', p.from.crs + ' \u2192 ' + p.to.crs));
+      w.appendChild(el('div', 'empty', 'No trains soon'));
+      return w;
+    }
     w.appendChild(el('div', 'w-time', shownTime(hero)));
+    w.appendChild(el('div', 'w-head', p.from.crs + ' \u2192 ' + p.to.crs));
+    w.appendChild(el('div', 'w-mins', minsLeft(hero)));
     w.appendChild(el('div', 'w-status ' + cls(hero.status), label(hero)));
-    w.appendChild(el('div', 'w-sub', 'Arrives ' + clock(hero.arrivesExpected || hero.arrives) + (hero.platform ? ' · ' + plat(hero) : '')));
+    w.appendChild(el('div', 'w-sub', 'Arrives ' + p.to.crs + ' ' + clock(hero.arrivesExpected || hero.arrives)));
+    w.appendChild(el('div', 'w-foot', 'Departing (' + platTbc(hero) + ')'));
     return w;
   }
   function medium(p) {
     var w = el('div', 'w w-medium');
     w.appendChild(el('div', 'w-head', p.from.name + ' → ' + p.to.name));
-    if (!p.next.length) w.appendChild(el('div', 'empty', 'No trains in the next few hours.'));
-    p.next.slice(0, 3).forEach(function (t) {
+    var rows = upcoming(p);
+    if (!rows.length) w.appendChild(el('div', 'empty', 'No trains in the next few hours.'));
+    rows.slice(0, 3).forEach(function (t) {
       var r = el('div', 'w-row');
       r.appendChild(el('span', 'w-dot d-' + cls(t.status)));
       r.appendChild(el('span', 't' + (t.status === 'cancelled' ? ' cancelled' : ''), shownTime(t)));
@@ -134,15 +164,27 @@
   }
   function lock(p) {
     var frag = document.createDocumentFragment();
-    var hero = p.next.filter(running)[0];
+    var list = upcoming(p), hero = list.filter(running)[0];
     var rect = el('div', 'lock-rect');
-    rect.appendChild(el('div', 'a', p.from.crs + ' to ' + p.to.crs));
+    var main = el('div', 'lock-main');
     if (hero) {
-      rect.appendChild(el('div', 'b', shownTime(hero)));
-      rect.appendChild(el('div', 'c', label(hero) + (hero.platform ? ' · ' + plat(hero) : '')));
-    } else rect.appendChild(el('div', 'c', 'No trains soon'));
+      var r1 = el('div', 'r1');
+      r1.appendChild(el('span', 'tm', shownTime(hero)));
+      r1.appendChild(el('span', 'rt', p.from.crs + '\u2192' + p.to.crs));
+      main.appendChild(r1);
+      main.appendChild(el('div', 'r2', minsLeft(hero) + ' \u00b7 ' + label(hero)));
+      main.appendChild(el('div', 'r3', 'Arrives ' + p.to.crs + ' ' + clock(hero.arrivesExpected || hero.arrives)));
+      main.appendChild(el('div', 'r4', 'Departing (' + platTbc(hero) + ')'));
+    } else main.appendChild(el('div', 'r2', 'No trains soon'));
+    rect.appendChild(main);
+    rect.appendChild(el('div', 'lock-div'));
+    var next = el('div', 'lock-next');
+    list.filter(function (t) { return !hero || t.rid !== hero.rid; }).slice(0, 2).forEach(function (t) {
+      next.appendChild(el('span', t.status === 'cancelled' ? 'cancelled' : '', shownTime(t) + (t.status === 'delayed' ? ' +' + t.delayMinutes : '')));
+    });
+    rect.appendChild(next);
     frag.appendChild(rect);
-    frag.appendChild(el('div', 'lock-inline', hero ? shownTime(hero) + ' to ' + p.to.crs + ' · ' + label(hero) : 'No trains to ' + p.to.crs));
+    frag.appendChild(el('div', 'lock-inline', hero ? shownTime(hero) + ' to ' + p.to.crs + ' \u00b7 ' + minsLeft(hero) : 'No trains to ' + p.to.crs));
     return frag;
   }
 

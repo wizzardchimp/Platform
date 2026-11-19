@@ -16,7 +16,8 @@ struct TrainEntry: TimelineEntry {
 
 struct Provider: TimelineProvider {
     func placeholder(in context: Context) -> TrainEntry {
-        TrainEntry(date: Date(), state: .loaded(.sample))
+        let now = Date()
+        return TrainEntry(date: now, state: .loaded(.sample(now: now)))
     }
 
     func getSnapshot(in context: Context, completion: @escaping (TrainEntry) -> Void) {
@@ -24,20 +25,28 @@ struct Provider: TimelineProvider {
             completion(placeholder(in: context))
             return
         }
-        Task { completion(await load()) }
+        Task { completion(await load(at: Date())) }
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<TrainEntry>) -> Void) {
         Task {
-            let entry = await load()
-            // iOS decides the real refresh time; this is a request, not a guarantee.
-            let next = Calendar.current.date(byAdding: .minute, value: 5, to: Date()) ?? Date().addingTimeInterval(300)
-            completion(Timeline(entries: [entry], policy: .after(next)))
+            let now = Date()
+            let first = await load(at: now)
+            var entries = [first]
+            // One fetch, then one entry per minute: the "minutes to go" counts down and the
+            // next train takes over after a departure without another network call.
+            if case .loaded(let payload) = first.state {
+                for minute in 1..<20 {
+                    entries.append(TrainEntry(date: now.addingTimeInterval(Double(minute) * 60), state: .loaded(payload)))
+                }
+            }
+            // A request, not a guarantee: iOS decides the real refresh time.
+            let refresh = now.addingTimeInterval(15 * 60)
+            completion(Timeline(entries: entries, policy: .after(refresh)))
         }
     }
 
-    private func load() async -> TrainEntry {
-        let now = Date()
+    private func load(at now: Date) async -> TrainEntry {
         guard let config = WidgetConfig.load(), let home = config.home, let work = config.work else {
             return TrainEntry(date: now, state: .needsSetup)
         }
@@ -83,7 +92,7 @@ struct TrainWidgetView: View {
         case .failed(let from, let to):
             message("Can't load trains for \(from) to \(to).")
         case .loaded(let payload):
-            content(payload)
+            content(payload, now: entry.date)
         }
     }
 
@@ -94,65 +103,110 @@ struct TrainWidgetView: View {
     }
 
     @ViewBuilder
-    private func content(_ p: WidgetPayload) -> some View {
+    private func content(_ p: WidgetPayload, now: Date) -> some View {
+        let hero = p.hero(at: now)
         switch family {
         case .accessoryInline:
-            if let t = p.hero {
-                Text("\(t.departureText) to \(p.to.crs) · \(t.statusText)")
+            if let t = hero {
+                Text("\(t.departureText) to \(p.to.crs) · \(t.minutesText(from: now))")
             } else {
                 Text("No trains to \(p.to.crs)")
             }
         case .accessoryRectangular:
-            VStack(alignment: .leading, spacing: 2) {
-                Text("\(p.from.crs) to \(p.to.crs)").font(.caption2).foregroundStyle(.secondary)
-                if let t = p.hero {
-                    Text(t.departureText).font(.headline)
-                    Text(t.statusText + (t.platform.map { " · Plat \($0)" } ?? "")).font(.caption)
-                } else {
-                    Text("No trains soon").font(.caption)
-                }
-            }
+            lockScreen(p, hero: hero, now: now)
         case .systemMedium:
             VStack(alignment: .leading, spacing: 6) {
-                header(p)
-                if p.next.isEmpty {
+                Text("\(p.from.name) → \(p.to.name)")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                let rows = p.upcoming(at: now)
+                if rows.isEmpty {
                     Text("No trains in the next few hours.").font(.footnote).foregroundStyle(.secondary)
                 }
-                ForEach(p.next.prefix(3)) { t in row(t) }
+                ForEach(rows.prefix(3)) { t in row(t) }
                 Spacer(minLength: 0)
             }
         default: // systemSmall
+            smallWidget(p, hero: hero, now: now)
+        }
+    }
+
+    // Small widget, top to bottom: departure time, route, minutes to go,
+    // status and arrival, then the platform.
+    @ViewBuilder
+    private func smallWidget(_ p: WidgetPayload, hero: TrainRow?, now: Date) -> some View {
+        if let t = hero {
             VStack(alignment: .leading, spacing: 2) {
-                // Station codes: full names don't fit a small widget.
+                Text(t.departureText)
+                    .font(.system(size: 34, weight: .bold, design: .rounded))
+                    .monospacedDigit()
+                    .minimumScaleFactor(0.7)
+                    .lineLimit(1)
                 Text("\(p.from.crs) → \(p.to.crs)")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
+                Text(t.minutesText(from: now))
+                    .font(.title3.weight(.bold))
+                    .lineLimit(1)
+                Text(t.statusText)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(statusColor(t.status))
+                    .lineLimit(1)
+                Text("Arrives \(p.to.crs) \(t.arrivalText)")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
                 Spacer(minLength: 0)
-                if let t = p.hero {
-                    Text(t.departureText)
-                        .font(.system(size: 38, weight: .bold, design: .rounded))
-                        .minimumScaleFactor(0.7)
-                        .lineLimit(1)
-                    Text(t.statusText)
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(statusColor(t.status))
-                    Text("Arrives \(t.arrivalText)" + (t.platform.map { " · Plat \($0)" } ?? ""))
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                } else {
-                    Text("No trains soon").font(.footnote).foregroundStyle(.secondary)
-                }
+                Text("Departing (\(t.platformText))")
+                    .font(.caption2.weight(.medium))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+        } else {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("\(p.from.crs) → \(p.to.crs)")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                Text("No trains soon").font(.footnote).foregroundStyle(.secondary)
             }
         }
     }
 
-    private func header(_ p: WidgetPayload) -> some View {
-        Text("\(p.from.name) → \(p.to.name)")
-            .font(.caption.weight(.semibold))
-            .foregroundStyle(.secondary)
-            .lineLimit(1)
+    // Lock screen: the small-widget content on the left, a divider, then the next two trains.
+    @ViewBuilder
+    private func lockScreen(_ p: WidgetPayload, hero: TrainRow?, now: Date) -> some View {
+        HStack(alignment: .top, spacing: 5) {
+            if let t = hero {
+                VStack(alignment: .leading, spacing: 0) {
+                    HStack(alignment: .firstTextBaseline, spacing: 3) {
+                        Text(t.departureText).font(.subheadline.weight(.bold)).monospacedDigit()
+                        Text("\(p.from.crs)→\(p.to.crs)").font(.system(size: 9.5)).foregroundStyle(.secondary)
+                    }
+                    Text("\(t.minutesText(from: now)) · \(t.statusText)").font(.caption.weight(.semibold))
+                    Text("Arrives \(p.to.crs) \(t.arrivalText)").font(.caption2)
+                    Text("Departing (\(t.platformText))").font(.caption2).foregroundStyle(.secondary)
+                }
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+            } else {
+                Text("No trains soon").font(.caption)
+            }
+            Spacer(minLength: 0)
+            Rectangle().fill(.secondary).frame(width: 1)
+            VStack(alignment: .trailing, spacing: 2) {
+                ForEach(p.following(after: hero, at: now, count: 2)) { t in
+                    Text(t.departureText + (t.status == "delayed" ? " +\(t.delayMinutes)" : ""))
+                        .font(.caption2.weight(.semibold))
+                        .monospacedDigit()
+                        .strikethrough(t.status == "cancelled")
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                }
+                Spacer(minLength: 0)
+            }
+        }
     }
 
     private func row(_ t: TrainRow) -> some View {

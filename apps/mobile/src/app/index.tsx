@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Stack, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { CogIcon } from '@/components/CogIcon';
 import { DepartureRow } from '@/components/DepartureRow';
 import { StatusPill } from '@/components/StatusPill';
 import { api, hhmm } from '@/lib/api';
@@ -123,8 +124,14 @@ function SettingsLink() {
   const t = useTheme();
   const router = useRouter();
   return (
-    <Pressable hitSlop={12} onPress={() => router.push('/settings')} style={{ paddingHorizontal: 8 }}>
-      <Text style={{ color: t.accent, fontWeight: '700' }}>Stations</Text>
+    <Pressable
+      hitSlop={12}
+      onPress={() => router.push('/settings')}
+      style={{ paddingHorizontal: 8, paddingVertical: 4 }}
+      accessibilityRole="button"
+      accessibilityLabel="Choose home and work stations"
+    >
+      <CogIcon size={24} color={t.accent} />
     </Pressable>
   );
 }
