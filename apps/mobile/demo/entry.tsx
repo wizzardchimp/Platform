@@ -97,4 +97,4 @@ const s = StyleSheet.create({
 });
 
 AppRegistry.registerComponent('Demo', () => DemoApp);
-AppRegistry.runApplication('Demo', { rootTag: document.getElementById('root') as never });
+AppRegistry.runApplication('Demo', { rootTag: document.getElementById('root'), initialProps: {} } as never);
