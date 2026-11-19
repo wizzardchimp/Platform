@@ -61,7 +61,7 @@
   .ok { color: var(--w-ok); } .warn { color: var(--w-warn); } .bad { color: var(--w-bad); } .gray { color: var(--w-gray); }
   .d-ok { background: var(--w-ok); } .d-warn { background: var(--w-warn); } .d-bad { background: var(--w-bad); } .d-gray { background: var(--w-gray); }
 
-  .lock { background: var(--lock-bg); color: var(--lock-fg); border-radius: 18px; padding: 14px; display: flex; flex-direction: column; gap: 10px; width: 100%; box-sizing: border-box; }
+  .lock { background: var(--lock-bg); color: var(--lock-fg); border-radius: 18px; padding: 14px; display: flex; flex-direction: column; gap: 10px; width: fit-content; max-width: 100%; box-sizing: border-box; }
   .lock-rect { background: rgba(255,255,255,.12); border-radius: 12px; padding: 6px 8px; width: 172px; height: 76px; box-sizing: border-box;
                display: flex; gap: 5px; overflow: hidden; line-height: 1.2; }
   .lock-main { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; }
@@ -72,8 +72,9 @@
   .lock-main .r3 { font-size: 10.5px; }
   .lock-main .r4 { font-size: 10.5px; color: var(--lock-sub); }
   .lock-div { width: 1px; background: var(--lock-sub); flex: none; }
-  .lock-next { display: flex; flex-direction: column; gap: 2px; align-items: flex-end; font-size: 11px; font-weight: 650; font-variant-numeric: tabular-nums; white-space: nowrap; }
-  .lock-inline { font-size: 13px; font-weight: 500; }
+  .lock-next { display: flex; flex-direction: column; gap: 3px; align-items: flex-end; white-space: nowrap; }
+  .lock-next .tm2 { font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.15; }
+  .lock-next .st2 { font-size: 9px; color: var(--lock-sub); line-height: 1.1; }
   .empty { font-size: 12.5px; color: var(--w-sub); }
 </style>
 <p class="note"><strong>Interactive demo.</strong> A simulated Paddington to Reading timetable runs inside this page, so trains, delays and cancellations are live-looking but not real. Home is Slough and work is London Paddington. In the app, tap To work to see a train approaching, then open it for the line view.</p>
@@ -180,11 +181,14 @@
     rect.appendChild(el('div', 'lock-div'));
     var next = el('div', 'lock-next');
     list.filter(function (t) { return !hero || t.rid !== hero.rid; }).slice(0, 2).forEach(function (t) {
-      next.appendChild(el('span', t.status === 'cancelled' ? 'cancelled' : '', shownTime(t) + (t.status === 'delayed' ? ' +' + t.delayMinutes : '')));
+      var item = el('div', '');
+      item.style.textAlign = 'right';
+      item.appendChild(el('div', 'tm2' + (t.status === 'cancelled' ? ' cancelled' : ''), shownTime(t)));
+      item.appendChild(el('div', 'st2', { on_time: 'On time', delayed: '+' + t.delayMinutes + ' min', cancelled: 'Cancelled' }[t.status] || 'Departed'));
+      next.appendChild(item);
     });
     rect.appendChild(next);
     frag.appendChild(rect);
-    frag.appendChild(el('div', 'lock-inline', hero ? shownTime(hero) + ' to ' + p.to.crs + ' \u00b7 ' + minsLeft(hero) : 'No trains to ' + p.to.crs));
     return frag;
   }
 

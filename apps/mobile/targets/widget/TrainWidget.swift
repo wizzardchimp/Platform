@@ -98,7 +98,7 @@ struct TrainWidgetView: View {
 
     private func message(_ text: String) -> some View {
         Text(text)
-            .font(family == .accessoryInline ? Font.caption : Font.footnote)
+            .font(.footnote)
             .multilineTextAlignment(.leading)
     }
 
@@ -106,12 +106,6 @@ struct TrainWidgetView: View {
     private func content(_ p: WidgetPayload, now: Date) -> some View {
         let hero = p.hero(at: now)
         switch family {
-        case .accessoryInline:
-            if let t = hero {
-                Text("\(t.departureText) to \(p.to.crs) · \(t.minutesText(from: now))")
-            } else {
-                Text("No trains to \(p.to.crs)")
-            }
         case .accessoryRectangular:
             lockScreen(p, hero: hero, now: now)
         case .systemMedium:
@@ -195,14 +189,19 @@ struct TrainWidgetView: View {
             }
             Spacer(minLength: 0)
             Rectangle().fill(.secondary).frame(width: 1)
-            VStack(alignment: .trailing, spacing: 2) {
+            VStack(alignment: .trailing, spacing: 3) {
                 ForEach(p.following(after: hero, at: now, count: 2)) { t in
-                    Text(t.departureText + (t.status == "delayed" ? " +\(t.delayMinutes)" : ""))
-                        .font(.caption2.weight(.semibold))
-                        .monospacedDigit()
-                        .strikethrough(t.status == "cancelled")
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.8)
+                    VStack(alignment: .trailing, spacing: 0) {
+                        Text(t.departureText)
+                            .font(.caption.weight(.bold))
+                            .monospacedDigit()
+                            .strikethrough(t.status == "cancelled")
+                        Text(t.shortStatusText)
+                            .font(.system(size: 9))
+                            .foregroundStyle(.secondary)
+                    }
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
                 }
                 Spacer(minLength: 0)
             }
@@ -238,6 +237,6 @@ struct TrainWidget: Widget {
         }
         .configurationDisplayName("Next trains")
         .description("Your next trains between home and work.")
-        .supportedFamilies([.systemSmall, .systemMedium, .accessoryRectangular, .accessoryInline])
+        .supportedFamilies([.systemSmall, .systemMedium, .accessoryRectangular])
     }
 }

@@ -59,6 +59,16 @@ struct TrainRow: Codable, Identifiable {
 
     var platformText: String { platform.map { "Plat \($0)" } ?? "Plat TBC" }
 
+    /// Short form for tight spaces such as the lock-screen side column.
+    var shortStatusText: String {
+        switch status {
+        case "on_time": return "On time"
+        case "delayed": return "+\(delayMinutes) min"
+        case "cancelled": return "Cancelled"
+        default: return "Departed"
+        }
+    }
+
     var statusText: String {
         switch status {
         case "on_time": return "On time"
