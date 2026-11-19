@@ -5,12 +5,12 @@ import type {
 
 // Android emulators reach the host machine at 10.0.2.2. On a physical phone
 // set EXPO_PUBLIC_API_URL to your computer's LAN address.
-const BASE =
+export const API_BASE =
   process.env.EXPO_PUBLIC_API_URL ??
   (Platform.OS === 'android' ? 'http://10.0.2.2:3000' : 'http://localhost:3000');
 
 async function get<T>(path: string): Promise<T> {
-  const res = await fetch(`${BASE}${path}`);
+  const res = await fetch(`${API_BASE}${path}`);
   if (!res.ok) throw new Error(`API ${res.status}`);
   return (await res.json()) as T;
 }

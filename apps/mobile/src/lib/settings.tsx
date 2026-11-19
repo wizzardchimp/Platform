@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { syncWidget } from './widgetSync';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
 export interface SavedStation { crs: string; name: string }
@@ -25,6 +26,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       .catch(() => {})
       .finally(() => setLoaded(true));
   }, []);
+
+  // Keep the home-screen widget in step with the saved stations (also on app start).
+  useEffect(() => {
+    if (loaded) syncWidget(state.home, state.work);
+  }, [loaded, state.home, state.work]);
 
   const save = useCallback((next: typeof state) => {
     setState(next);

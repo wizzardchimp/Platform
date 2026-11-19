@@ -19,6 +19,7 @@ await build({
     'react-native': 'react-native-web',
     'expo-router': r('shims/expo-router.tsx'),
     '@react-native-async-storage/async-storage': r('shims/async-storage.ts'),
+    '@bacons/apple-targets': r('shims/apple-targets.ts'),
   },
   define: {
     'process.env.NODE_ENV': '"production"',

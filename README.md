@@ -41,13 +41,29 @@ one script (`npm run demo:build -w @platform/mobile`). Small shims replace the
 router, storage and network, and the synthetic feed runs inside the page, so it
 needs no server. `demo/index.html` is the page that loads `dist/app.js`.
 
-## Widgets (next)
+## iOS widget
 
-Widgets must be native (WidgetKit on iOS, Glance on Android) and need a Mac with
-Xcode. They should call one small endpoint, `GET /v1/widget/:from/:to`
-(`WidgetData` in `packages/shared`), and show the next 3 trains. The app writes the
-saved home/work pair to a shared App Group so the widget knows which route to fetch.
-Needs a dev build (`expo prebuild`); Expo Go cannot run widgets.
+A WidgetKit widget lives in `apps/mobile/targets/widget` (Swift), linked into the
+Xcode project by `@bacons/apple-targets`. Sizes: small, medium, lock-screen
+rectangular and inline. It shows the next trains for home to work before midday
+and work to home after, calls `GET /v1/widget/:from/:to`, and opens the app on tap.
+The app shares the saved stations with it through the App Group
+`group.com.platform.trains` (`src/lib/widgetSync.ts`).
+
+**Status: written and wired, prebuild verified, never compiled or run.**
+Needs a Mac with Xcode 16 and a development build (Expo Go cannot run widgets):
+
+```bash
+cd apps/mobile
+# 1. set ios.appleTeamId in app.json (Xcode > Signing & Capabilities), and change
+#    bundleIdentifier / App Group (app.json, widgetSync.ts, Models.swift) to your own
+npx expo prebuild -p ios --clean
+npx expo run:ios            # or: xed ios, then run the Platform scheme
+```
+
+Then long-press the home screen, tap +, and add "Next trains". On a physical phone
+the widget needs a reachable API: set `EXPO_PUBLIC_API_URL` to a deployed HTTPS URL
+(a LAN address works for the app, and for the widget only if ATS allows it).
 
 ## Going live (Darwin)
 
